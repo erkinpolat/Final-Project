@@ -1,0 +1,67 @@
+library(foreign)
+library(Matching)
+
+data = read.dta("edited_data_.dta")
+
+#regression models for 7 dependent variables, half with the specifications for robustness
+lm1_b <- lm(VPCT_P_ALL_NC100 ~ scand + L_VPCT_P_ALL_NC100 + L_u_p + L_N + L_inc + dem_rep_oth, data = data)
+summary(lm1_b)
+lm2_b <- lm(N ~ scand + L_VPCT_P_ALL_NC100 + L_u_p + L_N + L_inc + dem_rep_oth, data = data)
+summary(lm2_b)
+lm3_b <- lm(u_p ~ scand + L_VPCT_P_ALL_NC100 + L_u_p + L_N + L_inc + dem_rep_oth, data = data)
+summary(lm3_b)
+lm4_b <- lm(goodchall_P_max_NC0 ~ scand + L_VPCT_P_ALL_NC100 + L_u_p + L_N + L_inc + dem_rep_oth, data = data)
+summary(lm4_b)
+lm5_b <- lm(w_pr ~ scand + L_VPCT_P_ALL_NC100 + L_u_p + L_N + L_inc + dem_rep_oth, data = data)
+summary(lm5_b)
+lm1_y <- lm(VPCT_P_ALL_NC100 ~ scand + L_VPCT_P_ALL_NC100 + L_u_p + L_N + L_inc + dem_rep_oth + t_1 + t_2 + t_3, data = data)
+summary(lm1_y)
+lm2_y <- lm(N ~ scand + L_VPCT_P_ALL_NC100 + L_u_p + L_N + L_inc + dem_rep_oth + t_1 + t_2 + t_3, data = data)
+summary(lm2_y)
+lm3_y <- lm(u_p ~ scand + L_VPCT_P_ALL_NC100 + L_u_p + L_N + L_inc + dem_rep_oth + t_1 + t_2 + t_3, data = data)
+summary(lm3_y)
+lm4_y <- lm(goodchall_P_max_NC0 ~ scand + L_VPCT_P_ALL_NC100 + L_u_p + L_N + L_inc + dem_rep_oth + t_1 + t_2 + t_3, data = data)
+summary(lm4_y)
+lm5_y <- lm(w_pr ~ scand + L_VPCT_P_ALL_NC100 + L_u_p + L_N + L_inc + dem_rep_oth + t_1 + t_2 + t_3, data = data)
+summary(lm5_y)
+lm6_b <- lm(VPCT_G_ALL_NC100 ~ scand + L_VPCT_P_ALL_NC100 + L_inc + dem_rep_oth, data = data)
+summary(lm6_b)
+lm7_b <- lm(w_g ~ scand + L_VPCT_P_ALL_NC100 + L_inc + dem_rep_oth, data = data)
+summary(lm7_b)
+lm6_y <- lm(VPCT_G_ALL_NC100 ~ scand + L_VPCT_P_ALL_NC100 + L_inc + dem_rep_oth + ip_1 + ip_2, data = data)
+summary(lm6_y)
+lm7_y <- lm(w_g ~ scand + L_VPCT_P_ALL_NC100 + L_inc + dem_rep_oth + ip_1 + ip_2, data = data)
+summary(lm7_y)
+
+#creating a smaller dataset with some of the data for efficiency
+temp = data[c("VPCT_P_ALL_NC100", "N", "u_p", "goodchall_P_max_NC0", "w_pr", "VPCT_G_ALL_NC100", "w_g", "scand", "L_VPCT_P_ALL_NC100", "L_u_p", "L_N", "L_inc", "t_1", "t_2", "t_3","terms", "dem_rep_oth", "ip_1", "ip_2")]
+
+#getting rid of the data rows that contain NAs
+data2 <- na.omit(temp)
+
+#glm for propensity score calculation
+glm_prop <- glm(data2$scand ~ data2$L_VPCT_P_ALL_NC100 + data2$L_inc + data2$dem_rep_oth + data2$L_N + data2$L_u_p + data2$terms)
+
+#propensity score matching
+mout <- Match(Tr=Tr, X=glm_prop$fitted, M=1)
+summary(mout)
+
+#checking the balance, (interestingly here the balanced seemed to be already very small, this was very curious)
+mb  <- MatchBalance(Tr ~ data2$L_VPCT_P_ALL_NC100 + data2$L_inc + data2$dem_rep_oth + data2$L_N + data2$L_u_p + data2$terms, match.out = mout, nboots=500)
+
+#inserting the Ys after checking the balance
+mout_withy <- Match(Y=data2$VPCT_P_ALL_NC100, Tr=Tr, X=glm_prop$fitted, M=1)
+
+#checking the treatment effect and the p-value
+summary(mout_withy)
+
+#doing the same for the other dependent variables
+mout_withy2 <- Match(Y=data2$N, Tr=Tr, X=glm_prop$fitted, M=1)
+mout_withy3 <- Match(Y=data2$u_p, Tr=Tr, X=glm_prop$fitted, M=1)
+mout_withy4 <- Match(Y=data2$goodchall_P_max_NC0, Tr=Tr, X=glm_prop$fitted, M=1)
+mout_withy5 <- Match(Y=data2$w_pr, Tr=Tr, X=glm_prop$fitted, M=1)
+
+summary(mout_withy2)
+summary(mout_withy3)
+summary(mout_withy4)
+summary(mout_withy5)
